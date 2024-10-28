@@ -18,6 +18,8 @@ node {
   output_stream: "DETECTIONS:detections"
   node_options: {
     [type.googleapis.com/mediapipe.FaceDetectionOptions] {
+#	tensor_width: 192
+#	tensor_height: 192
       delegate { xnnpack {} }
     }
   }

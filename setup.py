@@ -30,7 +30,7 @@ from setuptools.command import build_ext
 from setuptools.command import build_py
 from setuptools.command import install
 
-__version__ = 'dev'
+__version__ = '0.10.9'
 MP_DISABLE_GPU = os.environ.get('MEDIAPIPE_DISABLE_GPU') != '0'
 IS_WINDOWS = (platform.system() == 'Windows')
 IS_MAC = (platform.system() == 'Darwin')
@@ -242,7 +242,7 @@ class BuildModules(build_ext.build_ext):
   boolean_options = build_ext.build_ext.boolean_options + ['link-opencv']
 
   def initialize_options(self):
-    self.link_opencv = False
+    self.link_opencv = True
     build_ext.build_ext.initialize_options(self)
 
   def finalize_options(self):
@@ -304,7 +304,9 @@ class BuildModules(build_ext.build_ext):
         'bazel',
         'build',
         '--compilation_mode=opt',
-        '--copt=-DNDEBUG',
+	'--copt=-DNDEBUG',
+	'--host_copt=-march=loongarch64',
+	'--verbose_failures',
         '--action_env=PYTHON_BIN_PATH=' + _normalize_path(sys.executable),
         binary_graph_target,
     ] + GPU_OPTIONS
@@ -371,7 +373,7 @@ class BuildExtension(build_ext.build_ext):
   boolean_options = build_ext.build_ext.boolean_options + ['link-opencv']
 
   def initialize_options(self):
-    self.link_opencv = False
+    self.link_opencv = True
     build_ext.build_ext.initialize_options(self)
 
   def finalize_options(self):
@@ -382,31 +384,14 @@ class BuildExtension(build_ext.build_ext):
     if IS_MAC:
       for ext in self.extensions:
         target_name = self.get_ext_fullpath(ext.name)
-        # Build x86
-        self._build_binary(
-            ext,
-            ['--cpu=darwin', '--ios_multi_cpus=i386,x86_64,armv7,arm64'],
-        )
-        x86_name = self.get_ext_fullpath(ext.name)
-        # Build Arm64
-        ext.name = ext.name + '.arm64'
-        self._build_binary(
-            ext,
-            ['--cpu=darwin_arm64', '--ios_multi_cpus=i386,x86_64,armv7,arm64'],
-        )
-        arm64_name = self.get_ext_fullpath(ext.name)
         # Merge architectures
         lipo_command = [
             'lipo',
             '-create',
             '-output',
             target_name,
-            x86_name,
-            arm64_name,
         ]
         _invoke_shell_command(lipo_command)
-        # Delete the arm64 file (the x86 file was overwritten by lipo)
-        _invoke_shell_command(['rm', arm64_name])
     else:
       for ext in self.extensions:
         self._build_binary(ext)
@@ -420,6 +405,7 @@ class BuildExtension(build_ext.build_ext):
         'build',
         '--compilation_mode=opt',
         '--copt=-DNDEBUG',
+	'--verbose_failures',
         '--action_env=PYTHON_BIN_PATH=' + _normalize_path(sys.executable),
         str(ext.bazel_target + '.so'),
     ] + GPU_OPTIONS
@@ -452,7 +438,7 @@ class BuildPy(build_py.build_py):
   boolean_options = build_py.build_py.boolean_options + ['link-opencv']
 
   def initialize_options(self):
-    self.link_opencv = False
+    self.link_opencv = True
     build_py.build_py.initialize_options(self)
 
   def finalize_options(self):
@@ -482,7 +468,7 @@ class Install(install.install):
   boolean_options = install.install.boolean_options + ['link-opencv']
 
   def initialize_options(self):
-    self.link_opencv = False
+    self.link_opencv = True
     install.install.initialize_options(self)
 
   def finalize_options(self):
